@@ -1,10 +1,4 @@
 # QUICKSTART:
-Either (in a virtualenv)
-```bash
-pip install -r requirements.txt
-python binary_causes.py
-```
-Or
 ```bash
 python setup.py install
 python tests/graphical_test.py 
