@@ -1,10 +1,10 @@
 # QUICKSTART:
 Either (in a virtualenv)
-`pip -r requirements.txt`
-`python binary_causes.py`
+```pip -r requirements.txt
+python binary_causes.py```
 Or
-`python setup.py install`
-`python binary_causes.py`
+`python setup.py install
+python binary_causes.py```
 
 
 # Background
