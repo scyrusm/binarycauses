@@ -7,7 +7,7 @@ python binary_causes.py
 Or
 ```bash
 python setup.py install
-python binary_causes.py
+python tests/graphical_test.py 
 ```
 
 
