@@ -10,8 +10,8 @@ from scipy.stats.stats import pearsonr
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
-from partial_corr import partial_corr
-from plotting import plot_adjacencies
+from binarycauses.partial_corr import partial_corr
+from plotting.plotting import plot_adjacencies
 
 # TODO
 # check the hidden layer correctness

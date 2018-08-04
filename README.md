@@ -1,7 +1,7 @@
 # QUICKSTART:
 Either (in a virtualenv)
 ```bash
-pip -r requirements.txt
+pip install -r requirements.txt
 python binary_causes.py
 ```
 Or
