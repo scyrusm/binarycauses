@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from binarycauses.partial_corr import partial_corr
 from plotting.plotting import plot_adjacencies
+import itertools
 
 # TODO
 # check the hidden layer correctness
@@ -44,6 +45,10 @@ class Artificial:
         self.T = None
         self.X = None
         self.Y = None
+        # The following three parameters are hard-coded, but may be worth experimenting with
+        self.noise_magnitude=0.01,
+        self.noise_variance=1,
+        self.hidden_layers=1
 
     def generate_artificial_graph(self, n_nodes):
         """
@@ -61,7 +66,7 @@ class Artificial:
 
     def generate_artificial_data(self, T, use_binary=False):
         """
-        Generates artificial data (a more stateful wrapper of artificual_data_generator); assumes that the artificial graph has already been generated
+        Generates artificial data (a more stateful wrapper of artificial_data_generator); assumes that the artificial graph has already been generated
         Arguments
         --------
         T:  the number of datapoints
@@ -71,7 +76,10 @@ class Artificial:
             self.n_nodes,
             self.T, (self.unary_adjacencies, self.unary_coefficients),
             (self.binary_adjacencies, self.binary_coefficients),
-            use_binary=False)
+            use_binary=False,
+            noise_magnitude=self.noise_magnitude,
+            noise_variance=self.noise_variance,
+            hidden_layers=self.hidden_layers)
 
     def generate(self, n_nodes, T):
         """
@@ -91,7 +99,7 @@ class Artificial:
         -------
         n_nodes:  number of variables/nodes
         """
-
+        # Various parameters related to the artificial adjacency are hardcoded.  This should change.
         unary_adjacencies = np.random.choice(
             [0, 1], p=[0.8, 0.2], size=(n_nodes, n_nodes))
         binary_adjacencies = {
@@ -118,7 +126,10 @@ class Artificial:
                                   T,
                                   unary,
                                   binary,
-                                  use_binary=False):
+                                  use_binary=False,
+                                  noise_magnitude=0.01,
+                                  noise_variance=1,
+                                  hidden_layers=1):
         """
         Generates artificial data for an already-generated causal graph
         Arguments
@@ -134,12 +145,12 @@ class Artificial:
         X = np.random.normal(0, 1, (T, n_nodes))
         Y = 0.0 * np.random.normal(0, 1, (T, n_nodes))
 
-        def effect(X, Yin):
-            Y = np.copy(Yin)
+        def effect(X, Y):
+#            Y = np.copy(Yin)
             for irow in range(T):
                 Y[irow] += np.matmul(
                     unary[1],
-                    X[irow, :].T) + 0.01 * np.random.normal(0, 1, n_nodes)
+                    X[irow, :].T) + noise_magnitude * np.random.normal(0, noise_variance, n_nodes)
                 if use_binary:
                     for inode in range(n_nodes):
                         Y[irow] += np.sum(
@@ -147,10 +158,8 @@ class Artificial:
                                       binary[1][:, :, inode]))
             return Y
 
-        Y_hidden = effect(X, Y)
-        Y = effect(Y_hidden, Y_hidden)
-
-        Y = effect(X, Y)
+        for hl in range(hidden_layers+1):
+            Y = effect(X, Y)
         return X, Y
 
 
@@ -258,20 +267,20 @@ class EmpiricalCausalAdjacencySolver:
         n_nodes = X.shape[1]
         T = X.shape[0]
         unary_z_scores = np.zeros((n_nodes, n_nodes))
-        for inode in range(n_nodes):
-            for jnode in range(n_nodes):
-                rho = partial_correlation(X[:, jnode], Y[:, inode])[0, 1]
-                unary_z_scores[inode, jnode] = fisher_z(rho, 0, T)
-        empirical_adjacencies = z_score_to_adjacencies(unary_z_scores)
-
-        for inode in range(n_nodes):
-            for jnode in range(n_nodes):
-                if empirical_adjacencies[inode, jnode] == 1:
-                    for knode in range(n_nodes):
-                        rho = partial_correlation(X[:, jnode], Y[:, inode],
-                                                  X[:, knode])[0, 1]
-                        unary_z_scores[inode, jnode] = fisher_z(rho, 1, T)
-        empirical_unary_adjacencies = z_score_to_adjacencies(unary_z_scores)
+        empirical_unary_adjacencies = np.ones((n_nodes, n_nodes))
+        ##  This section is the "meat" of the algorithm.  The algorithm seeks to first eliminate all non-significant connections (where nothing is controlled for) between causal node inode and effect node jnode.  Then it will control for one other causal node, two nodes, etc., to check whether any causation can be explained indirectly through another causal node.  If it can, the adjacency is eliminated.  This may be overly conservative.  
+        for n_controls in range(n_nodes):
+            for inode in range(n_nodes):
+               for jnode in range(n_nodes):
+                   if empirical_unary_adjacencies[inode, jnode] == 1:
+                       possible_controls = [x for x in range(n_nodes) if x!= inode]
+                       controlled_z_scores = []
+                       for control_set in itertools.combinations(possible_controls, n_controls):
+                           controls = tuple(X[:,cnode] for cnode in control_set)
+                           rho = partial_correlation(X[:, jnode], Y[:, inode], *controls)[0, 1]
+                           controlled_z_scores.append(fisher_z(rho, len(controls), T))
+                       unary_z_scores[inode, jnode] = np.min(np.abs(controlled_z_scores))  #Picks the least-significant z-score
+            empirical_unary_adjacencies = z_score_to_adjacencies(unary_z_scores)
         binary_z_scores = {(x1, x2): np.ones(n_nodes)
                            for x1 in range(n_nodes)
                            for x2 in range((x1 + 1), n_nodes)}
