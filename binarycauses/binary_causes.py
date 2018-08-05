@@ -17,8 +17,9 @@ import itertools
 # TODO
 # check the hidden layer correctness
 # add tests
-# add comments, docstrings (NEXT)
 # Un-hard-code various parameters set in the artificial data generation
+
+# Account for significance/lack thereof of the partial correlation test.  This is important.  
 
 
 class Artificial:
