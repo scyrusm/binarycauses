@@ -14,3 +14,4 @@ Currently the artificial data generation has various hard-coded parameters, whos
 
 # TODO
 - Implement a partial correlation test for Bernoulli variables, per https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3884832/
+- Add more, better unit tests
