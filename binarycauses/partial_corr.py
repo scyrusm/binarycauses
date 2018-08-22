@@ -57,8 +57,6 @@ def partial_corr(C):
             idx = np.ones(p, dtype=np.bool)
             idx[i] = False
             idx[j] = False
-            if len(idx)>2:
-                from IPython.terminal.debugger import set_trace; set_trace() 
             beta_i = linalg.lstsq(C[:, idx], C[:, j])[0]
             beta_j = linalg.lstsq(C[:, idx], C[:, i])[0]
 
